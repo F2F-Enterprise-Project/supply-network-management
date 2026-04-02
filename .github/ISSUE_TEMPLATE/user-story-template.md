@@ -4,7 +4,7 @@ about: Describe this issue template's purpose here.
 title: "[USER STORY]"
 labels: User-story
 assignees: ''
-type: Task
+type: user-story
 
 ---
 
