@@ -1,0 +1,37 @@
+name: Deploy Service 
+on: 
+  push: 
+    branches: [ "main" ] 
+
+jobs: 
+  deploy: 
+    runs-on: ubuntu-latest 
+
+    steps: 
+    - name: Checkout Code 
+      uses: actions/checkout@v3 
+
+    - name: Deploy to Server 
+      uses: appleboy/ssh-action@v0.1.6 
+
+      with: 
+        host: ${{ secrets.SERVER_IP }} 
+        username: root 
+        key: ${{ secrets.PRIVATE_KEYS }} 
+        script: | 
+          cd /apps/${{ github.event.repository.name }} || mkdir -p /apps/${{ github.event.repository.name }} && cd /apps/${{ github.event.repository.name }} 
+
+          if [ -d ".git" ]; then 
+
+            git pull 
+
+          else 
+
+            git clone git@github.com:F2F-Enterprise-Project/${{ github.event.repository.name }}.git . 
+
+          fi 
+
+          docker build -t ${{ github.event.repository.name }} . 
+          docker stop ${{ github.event.repository.name }} || true 
+          docker rm ${{ github.event.repository.name }} || true 
+          docker run -d -p <PORT>:<PORT> --name ${{ github.event.repository.name }} ${{ github.event.repository.name }} 
