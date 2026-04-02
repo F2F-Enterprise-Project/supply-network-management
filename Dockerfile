@@ -11,9 +11,3 @@ COPY . .
 EXPOSE 3005
 
 CMD ["echo", "App entry point not yet defined"]
-```
-
----
-
-```
-# Dependencies
