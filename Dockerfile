@@ -10,4 +10,10 @@ COPY . .
 
 EXPOSE 3005
 
-CMD ["python", "app.py"]
+CMD ["echo", "App entry point not yet defined"]
+```
+
+---
+
+```
+# Dependencies
