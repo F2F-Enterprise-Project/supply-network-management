@@ -1,13 +1,16 @@
-FROM python:3.11-slim
+# Use an official Python runtime as a parent image
+FROM python:3.12-slim
 
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Set work directory
 WORKDIR /app
 
-COPY requirements.txt .
+# Install dependencies
+COPY requirements.txt /app/
+RUN pip install --upgrade pip && pip install -r requirements.txt
 
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-EXPOSE 3005
-
-CMD ["echo", "App entry point not yet defined"]
+# Copy project
+COPY . /app/

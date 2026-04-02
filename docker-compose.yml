@@ -1,0 +1,10 @@
+services:
+  web:
+    environment:
+      - PYTHONUNBUFFERED=1
+    build: .
+    command: python app.py
+    volumes:
+      - .:/app  # Maps current directory to /app inside container
+    ports:
+      - "8000:8000"
