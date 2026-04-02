@@ -9,8 +9,8 @@ type: Task
 ---
 
 ## User Story
-As a [type of user],  
-I want [goal/action],  
+As a user,  
+I want [action],  
 So that [reason/value].
 ---
 ## Description
