@@ -16,7 +16,7 @@ Endpoints:
 
 from flask import Flask
 import config
-from repository.db import init_db, close_db
+from repository.db import init_db
 from routes.health_routes import health_bp
 from routes.supply_routes import supply_bp
 

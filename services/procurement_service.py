@@ -24,7 +24,8 @@ def sync_vendors():
     vendors_data = agnet_client.get_vendors(include_inactive=True)
 
     # AgNet may return a list or a wrapper — normalise
-    vendors = vendors_data if isinstance(vendors_data, list) else vendors_data.get("vendors", vendors_data.get("items", []))
+    vendors = (vendors_data if isinstance(vendors_data, list)
+               else vendors_data.get("vendors", vendors_data.get("items", [])))
 
     conn = db.get_connection()
     cur = conn.cursor()

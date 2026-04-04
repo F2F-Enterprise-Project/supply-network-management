@@ -47,7 +47,7 @@ def test_register_shipment_accepted():
 def test_register_shipment_sends_correct_payload():
     mock_resp = _mock_response({"status": "accepted", "inventoryItemsUpdated": 1})
     items = [{"productId": "P1", "hierarchy": ["A", "B", "C"],
-               "productName": "Test", "quantity": 10.0, "unit": "kg"}]
+              "productName": "Test", "quantity": 10.0, "unit": "kg"}]
     with patch("requests.post", return_value=mock_resp) as mock_post:
         cis_client.register_shipment("SHIP-X", "VEND-1", "2026-04-04T00:00:00Z", items)
     body = mock_post.call_args.kwargs["json"]
@@ -83,7 +83,7 @@ def test_get_vendor_inventory():
 
 def test_get_vendor_inventory_with_filters():
     mock_resp = _mock_response({"page": 1, "pageSize": 100, "total": 0,
-                                 "hasNext": False, "items": []})
+                                "hasNext": False, "items": []})
     with patch("requests.get", return_value=mock_resp) as mock_get:
         cis_client.get_vendor_inventory(vendor_id="V1", product_id="P1")
     params = mock_get.call_args.kwargs["params"]
@@ -117,7 +117,7 @@ def test_get_shipment_history():
 
 def test_get_shipment_history_with_vendor_filter():
     mock_resp = _mock_response({"page": 1, "pageSize": 50,
-                                 "total": 0, "hasNext": False, "items": []})
+                                "total": 0, "hasNext": False, "items": []})
     with patch("requests.get", return_value=mock_resp) as mock_get:
         cis_client.get_shipment_history(vendor_id="V1")
     params = mock_get.call_args.kwargs["params"]
