@@ -1,28 +1,29 @@
 import uuid
+from DatabaseHandler import DatabaseHandler
 from sqlalchemy import create_engine
 from lightapi import LightApi, RestEndpoint, Field
 from typing import Optional
 from datetime import datetime
-class VendorEndpoint(RestEndpoint):
+class Vendor(RestEndpoint):
     """
     Vendor model that is also:
     - SQLAlchemy table
     - Pydantic schema
     - REST endpoint
     """
-    vendor_id: int = Field(primary_key=True)
+    vendor_id: str = Field(primary_key=True, index=True)
     name: str = Field(max_length=100)
     contact_email: str = Field(max_length=255, unique=True, pattern=r"^\S+@\S+\.\S+$")
     type: str = Field(max_length=100)
     reg_state: str = Field(max_length=100)
-    order_count: int =  Field(min=1)
+    order_count: int =  Field(default=0)
     last_order: datetime = Field(default_factory=datetime.now)
 
     class Meta:
-        table_name = "vendors" 
+        table_name = "vendors"
         endpoint = "/vendors"
 
-class CategoryEndpoint(RestEndpoint):
+class Category(RestEndpoint):
     category_id: str = Field(primary_key=True)
     parent_category_id: str = Field(foreign_key="categories.category_id", nullable=True)
     category_name: str = Field(max_length=100)
@@ -32,7 +33,7 @@ class CategoryEndpoint(RestEndpoint):
         table_name = "categories"
         endpoint = "/categories"
 
-class ProductEndpoint(RestEndpoint):
+class Product(RestEndpoint):
     product_id: str = Field(primary_key=True)
     vendor_id: str = Field(foreign_key="vendors.vendor_id")
     category_id: str = Field(foreign_key="categories.category_id")
@@ -43,7 +44,7 @@ class ProductEndpoint(RestEndpoint):
         table_name = "products"
         endpoint = "/products"
 
-class ShipmentEndpoint(RestEndpoint):
+class Shipment(RestEndpoint):
     shipment_id: str = Field(primary_key=True)
     vendor_id: str = Field(foreign_key="vendors.vendor_id")
     shipment_date: datetime = Field(default_factory=datetime.now)
@@ -52,12 +53,12 @@ class ShipmentEndpoint(RestEndpoint):
         table_name = "shipments"
         endpoint = "/shipments"
 
-class ShipmentLotEndpoint(RestEndpoint):
+class ShipmentLot(RestEndpoint):
     lot_id: uuid.UUID = Field(primary_key=True, default_factory=uuid.uuid4)
     shipment_id: str = Field(foreign_key="shipments.shipment_id")
     product_id: str = Field(foreign_key="products.product_id")
-    quantity_on_hand: float = Field() 
-    unit: str = Field() 
+    quantity_on_hand: float = Field()
+    unit: str = Field()
     last_restocked_date: datetime = Field(default_factory=datetime.now)
 
     class Meta:
@@ -68,12 +69,13 @@ engine = create_engine("sqlite:///supplynetwork.db", connect_args={"check_same_t
 
 app = LightApi(engine=engine)
 app.register({
-    "/vendors": VendorEndpoint,
-    "/categories": CategoryEndpoint,
-    "/products": ProductEndpoint,
-    "/shipments": ShipmentEndpoint,
-    "/shipment-lots": ShipmentLotEndpoint
+    "/vendors": Vendor,
+    "/categories": Category,
+    "/products": Product,
+    "/shipments": Shipment,
+    "/shipment-lots": ShipmentLot
 })
 
 if __name__ == "__main__":
+    DatabaseHandler.setup_tables()
     app.run(host="0.0.0.0", port=8000)
