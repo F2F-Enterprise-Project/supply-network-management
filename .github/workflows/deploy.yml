@@ -2,31 +2,51 @@ name: Deploy Service
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   deploy:
+    name: Deploy to Server
     runs-on: ubuntu-latest
-
+    # Only deploy if CI passes (ci.yml runs in parallel, but deploy
+    # should still work independently since both trigger on push to main)
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Deploy to Server
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.SERVER_IP }}
           username: root
           key: ${{ secrets.PRIVATE_KEYS }}
           script: |
-            mkdir -p /apps/${{ github.event.repository.name }}
-            cd /apps/${{ github.event.repository.name }}
+            set -e
+            APP_NAME="supply-network-management"
+            APP_DIR="/apps/$APP_NAME"
+            APP_PORT=3005
+
+            mkdir -p "$APP_DIR"
+            cd "$APP_DIR"
+
             if [ -d ".git" ]; then
-              git pull
+              git fetch --all
+              git reset --hard origin/main
             else
-              git clone git@github.com:F2F-Enterprise-Project/${{ github.event.repository.name }}.git .
+              git clone git@github.com:F2F-Enterprise-Project/$APP_NAME.git .
             fi
-            docker build -t ${{ github.event.repository.name }} .
-            docker stop ${{ github.event.repository.name }} || true
-            docker rm ${{ github.event.repository.name }} || true
-            docker run -d -p 3005:3005 --name ${{ github.event.repository.name }} ${{ github.event.repository.name }}
+
+            docker build -t "$APP_NAME" .
+            docker stop "$APP_NAME" 2>/dev/null || true
+            docker rm "$APP_NAME" 2>/dev/null || true
+            docker run -d \
+              -p "$APP_PORT:$APP_PORT" \
+              --name "$APP_NAME" \
+              --restart unless-stopped \
+              "$APP_NAME"
+
+            sleep 3
+            curl -sf "http://localhost:$APP_PORT/health" && echo " -> Health OK" || echo " -> Health check failed (service may still be starting)"

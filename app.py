@@ -1,79 +1,43 @@
-import uuid
-from sqlalchemy import create_engine
-from lightapi import LightApi, RestEndpoint, Field
-from typing import Optional
-from datetime import datetime
-class VendorEndpoint(RestEndpoint):
-    """
-    Vendor model that is also:
-    - SQLAlchemy table
-    - Pydantic schema
-    - REST endpoint
-    """
-    vendor_id: int = Field(primary_key=True)
-    name: str = Field(max_length=100)
-    contact_email: str = Field(max_length=255, unique=True, pattern=r"^\S+@\S+\.\S+$")
-    type: str = Field(max_length=100)
-    reg_state: str = Field(max_length=100)
-    order_count: int =  Field(min=1)
-    last_order: datetime = Field(default_factory=datetime.now)
+"""
+Supply & Network Management — Flask Application Entry Point.
 
-    class Meta:
-        table_name = "vendors" 
-        endpoint = "/vendors"
+Endpoints:
+  GET  /health                  → Health check
+  GET  /supply/vendors          → List vendors (local cache)
+  POST /supply/vendors/sync     → Pull vendors from AgNet
+  GET  /supply/vendors/<id>     → Single vendor detail
+  GET  /supply/catalog          → Product catalog
+  POST /supply/orders           → Place procurement order (AgNet → CIS)
+  GET  /supply/orders           → Order history
+  GET  /supply/shipments        → Shipment history
+  GET  /supply/inventory        → CIS pooled inventory
+  GET  /supply/dashboard        → AgNet dashboard
+"""
 
-class CategoryEndpoint(RestEndpoint):
-    category_id: str = Field(primary_key=True)
-    parent_category_id: str = Field(foreign_key="categories.category_id", nullable=True)
-    category_name: str = Field(max_length=100)
-    level: int = Field()
+from flask import Flask
+import config
+from repository.db import init_db, close_db
+from routes.health_routes import health_bp
+from routes.supply_routes import supply_bp
 
-    class Meta:
-        table_name = "categories"
-        endpoint = "/categories"
 
-class ProductEndpoint(RestEndpoint):
-    product_id: str = Field(primary_key=True)
-    vendor_id: str = Field(foreign_key="vendors.vendor_id")
-    category_id: str = Field(foreign_key="categories.category_id")
-    product_name: str = Field(max_length=100)
-    unit: str = Field()
+def create_app(db_path=None):
+    """Application factory — also used by tests."""
+    app = Flask(__name__)
+    app.config["TESTING"] = db_path == ":memory:"
 
-    class Meta:
-        table_name = "products"
-        endpoint = "/products"
+    init_db(db_path or config.DATABASE_PATH)
 
-class ShipmentEndpoint(RestEndpoint):
-    shipment_id: str = Field(primary_key=True)
-    vendor_id: str = Field(foreign_key="vendors.vendor_id")
-    shipment_date: datetime = Field(default_factory=datetime.now)
+    app.register_blueprint(health_bp)
+    app.register_blueprint(supply_bp)
 
-    class Meta:
-        table_name = "shipments"
-        endpoint = "/shipments"
+    @app.teardown_appcontext
+    def shutdown(exc):  # noqa: ARG001
+        pass  # DB connection is module-level; closed on process exit
 
-class ShipmentLotEndpoint(RestEndpoint):
-    lot_id: uuid.UUID = Field(primary_key=True, default_factory=uuid.uuid4)
-    shipment_id: str = Field(foreign_key="shipments.shipment_id")
-    product_id: str = Field(foreign_key="products.product_id")
-    quantity_on_hand: float = Field() 
-    unit: str = Field() 
-    last_restocked_date: datetime = Field(default_factory=datetime.now)
+    return app
 
-    class Meta:
-        table_name = "shipment_lots"
-        endpoint = "/shipment-lots"
-
-engine = create_engine("sqlite:///supplynetwork.db", connect_args={"check_same_thread": False})
-
-app = LightApi(engine=engine)
-app.register({
-    "/vendors": VendorEndpoint,
-    "/categories": CategoryEndpoint,
-    "/products": ProductEndpoint,
-    "/shipments": ShipmentEndpoint,
-    "/shipment-lots": ShipmentLotEndpoint
-})
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000)
+    application = create_app()
+    application.run(host="0.0.0.0", port=config.PORT, debug=False)

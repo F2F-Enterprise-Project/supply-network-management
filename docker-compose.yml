@@ -1,10 +1,15 @@
 services:
   web:
+    build: .
+    ports:
+      - "3005:3005"
     environment:
       - PYTHONUNBUFFERED=1
-    build: .
-    command: python app.py
+      - SNM_PORT=3005
+      - DATABASE_PATH=supplynetwork.db
+      - AGNET_BASE_URL=http://146.190.243.241:8303/api/v1
+      - AGNET_API_KEY=HIvnNIkD0leWhchFENJDPuW2Y_K2B-LTHeas79pqfkbVQVan
+      - CIS_BASE_URL=http://138.197.144.135:8203/api/v1
+      - CIS_API_KEY=cAcMVCjdHbUTDeWk1gK3Toc6P7rG9Oy8wZ4vx1I41hxM4EbT
     volumes:
-      - .:/app  # Maps current directory to /app inside container
-    ports:
-      - "8000:8000"
+      - .:/app
