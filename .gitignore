@@ -1,0 +1,3 @@
+# SQLite databases
+*.sqlite3
+*.db
