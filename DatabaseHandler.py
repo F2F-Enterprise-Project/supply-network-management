@@ -1,4 +1,6 @@
 import sqlite3
+
+
 class DatabaseHandler:
 
     @staticmethod
