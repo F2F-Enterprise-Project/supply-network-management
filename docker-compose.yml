@@ -2,6 +2,7 @@ services:
   web:
     environment:
       - PYTHONUNBUFFERED=1
+      - AGNET_SECTION_KEY=${AGNET_SECTION_KEY}
     build: .
     command: python app.py
     volumes:

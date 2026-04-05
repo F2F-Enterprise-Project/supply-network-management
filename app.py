@@ -1,9 +1,14 @@
 import uuid
+import os
+import requests
 from DatabaseHandler import DatabaseHandler
-from sqlalchemy import create_engine
+from starlette.responses import JSONResponse
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session
 from lightapi import LightApi, RestEndpoint, Field
 from datetime import datetime
 
+engine = create_engine("sqlite:///supplynetwork.db", connect_args={"check_same_thread": False})
 
 class Vendor(RestEndpoint):
     """
@@ -18,6 +23,59 @@ class Vendor(RestEndpoint):
     reg_state: str = Field(max_length=100)
     order_count: int = Field(default=0)
     last_order: datetime = Field(default_factory=datetime.now)
+
+    def queryset(self, request):
+        return select(Vendor)
+
+    def list(self, request):
+        with Session(engine) as session:
+            qs = self.queryset(request)
+            local_vendors = list(session.execute(qs).scalars().all())
+
+        agnet_url = "http://146.190.243.241:8303/api/v1/vendors"
+        api_key = os.getenv("AGNET_SECTION_KEY")
+
+        external_vendors = []
+        try:
+            response = requests.get(
+                agnet_url,
+                headers={"X-API-Key": api_key},
+                timeout=5
+            )
+            response.raise_for_status()
+            external_data = response.json()
+
+            for item in external_data.get("items", []):
+                external_vendors.append(Vendor(
+                    vendor_id=item.get("vendorId"),
+                    name=item.get("vendorName"),
+                    type=item.get("vendorType"),
+                    reg_state=item.get("regState"),
+                    order_count=item.get("orderCount", 0),
+                    last_order=item.get("lastOrder")
+                ))
+        except Exception as e:
+
+            print(f"AgNet Integration Error: {e}")
+
+        combined_list = local_vendors + external_vendors
+
+        data = []
+        for v in combined_list:
+            last_order_val = v.last_order
+            if hasattr(last_order_val, 'isoformat'):
+                last_order_val = last_order_val.isoformat()
+
+            data.append({
+                "vendor_id": v.vendor_id,
+                "name": v.name,
+                "type": v.type,
+                "reg_state": v.reg_state,
+                "order_count": v.order_count,
+                "last_order": last_order_val
+            })
+
+        return JSONResponse(data)
 
     class Meta:
         table_name = "vendors"
@@ -70,7 +128,7 @@ class ShipmentLot(RestEndpoint):
         endpoint = "/shipment-lots"
 
 
-engine = create_engine("sqlite:///supplynetwork.db", connect_args={"check_same_thread": False})
+
 
 app = LightApi(engine=engine)
 app.register({
