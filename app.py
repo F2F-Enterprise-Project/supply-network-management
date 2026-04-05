@@ -69,8 +69,8 @@ class ShipmentLot(RestEndpoint):
         table_name = "shipment_lots"
         endpoint = "/shipment-lots"
 
-engine = create_engine("sqlite:///supplynetwork.db", connect_args={"check_same_thread": False})
 
+engine = create_engine("sqlite:///supplynetwork.db", connect_args={"check_same_thread": False})
 
 app = LightApi(engine=engine)
 app.register({
