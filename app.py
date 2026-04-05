@@ -10,6 +10,7 @@ from datetime import datetime
 
 engine = create_engine("sqlite:///supplynetwork.db", connect_args={"check_same_thread": False})
 
+
 class Vendor(RestEndpoint):
     """
     Vendor model that is also:
@@ -126,8 +127,6 @@ class ShipmentLot(RestEndpoint):
     class Meta:
         table_name = "shipment_lots"
         endpoint = "/shipment-lots"
-
-
 
 
 app = LightApi(engine=engine)
