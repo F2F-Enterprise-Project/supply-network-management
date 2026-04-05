@@ -12,12 +12,12 @@ class Vendor(RestEndpoint):
     - Pydantic schema
     - REST endpoint
     """
-    vendor_id: str = Field(primary_key= True, index= True)
-    name: str = Field(max_length= 100)
-    type: str = Field(max_length= 100)
-    reg_state: str = Field(max_length= 100)
-    order_count: int = Field(default= 0)
-    last_order: datetime = Field(default_factory= datetime.now)
+    vendor_id: str = Field(primary_key=True, index=True)
+    name: str = Field(max_length=100)
+    type: str = Field(max_length=100)
+    reg_state: str = Field(max_length=100)
+    order_count: int = Field(default=0)
+    last_order: datetime = Field(default_factory=datetime.now)
 
     class Meta:
         table_name = "vendors"
@@ -70,6 +70,7 @@ class ShipmentLot(RestEndpoint):
         endpoint = "/shipment-lots"
 
 engine = create_engine("sqlite:///supplynetwork.db", connect_args={"check_same_thread": False})
+
 
 app = LightApi(engine=engine)
 app.register({
