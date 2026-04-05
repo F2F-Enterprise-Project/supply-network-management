@@ -13,7 +13,6 @@ class DatabaseHandler:
 
                 vendor_id VARCHAR(255) NOT NULL UNIQUE,
                 name VARCHAR(255) NOT NULL UNIQUE,
-                contact_email VARCHAR(255),
                 type VARCHAR(50) CHECK (type IN ('Farm', 'Butcher', 'Dairy')),
                 reg_state VARCHAR(50) DEFAULT 'New' CHECK (reg_state IN ('New', 'Active', 'Inactive')),
                 order_count INT DEFAULT 0,

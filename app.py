@@ -13,7 +13,6 @@ class Vendor(RestEndpoint):
     """
     vendor_id: str = Field(primary_key=True, index=True)
     name: str = Field(max_length=100)
-    contact_email: str = Field(max_length=255, unique=True, pattern=r"^\S+@\S+\.\S+$")
     type: str = Field(max_length=100)
     reg_state: str = Field(max_length=100)
     order_count: int =  Field(default=0)
