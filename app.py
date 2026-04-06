@@ -10,6 +10,10 @@ from datetime import datetime, UTC
 
 engine = create_engine("sqlite:///supplynetwork.db", connect_args={"check_same_thread": False})
 
+is_agnet_up = False
+agnet_base_url = "http://146.190.243.241:8303/api/v1"
+version = "0.2.1"
+
 
 class Vendor(RestEndpoint):
     """
@@ -33,7 +37,7 @@ class Vendor(RestEndpoint):
             qs = self.queryset(request)
             local_vendors = list(session.execute(qs).scalars().all())
 
-        agnet_url = "http://146.190.243.241:8303/api/v1/vendors"
+        agnet_url = f"{agnet_base_url}/vendors"
         api_key = os.getenv("AGNET_SECTION_KEY")
 
         external_vendors = []
@@ -148,6 +152,22 @@ class Health(RestEndpoint, HttpMethod.GET):
         endpoint = "/api/v1/health"
 
 
+class Version(RestEndpoint, HttpMethod.GET):
+
+    def list(self, request):
+        utc_now = datetime.now(UTC)
+        timestamp_str = utc_now.strftime('%Y-%m-%dT%H:%M:%SZ')
+        data = {
+            "version": version,
+            "timeUtc": timestamp_str
+        }
+
+        return JSONResponse(data)
+
+    class Meta:
+        endpoint = "/api/v1/version"
+
+
 app = LightApi(engine=engine)
 app.register({
     "/api/v1/vendors": Vendor,
@@ -155,9 +175,15 @@ app.register({
     "/api/v1/products": Product,
     "/api/v1/shipments": Shipment,
     "/api/v1/shipment-lots": ShipmentLot,
-    "/api/v1/health": Health
+    "/api/v1/health": Health,
+    "/api/v1/version": Version,
 })
 
 if __name__ == "__main__":
     DatabaseHandler.setup_tables()
+
+    response = requests.get(f"{agnet_base_url}/health")
+    if response.status_code == 200:
+        is_agnet_up = True
+
     app.run(host="0.0.0.0", port=8000)
