@@ -188,7 +188,7 @@ class OpenAPI(RestEndpoint, HttpMethod.GET):
                 continue
 
             model_name = endpoint_cls.__name__
-            methods = endpoint_cls._allowed_methods # e.g., {'GET', 'POST'}
+            methods = endpoint_cls._allowed_methods
 
             read_schema = endpoint_cls.__schema_read__.model_json_schema()
             create_schema = endpoint_cls.__schema_create__.model_json_schema()
@@ -205,7 +205,7 @@ class OpenAPI(RestEndpoint, HttpMethod.GET):
                         "200": {
                             "description": "A list of records",
                             "content": {"application/json": {"schema": {
-                                "type": "array", 
+                                "type": "array",
                                 "items": {"$ref": f"#/components/schemas/{model_name}Read"}
                             }}}
                         }
@@ -231,7 +231,7 @@ class OpenAPI(RestEndpoint, HttpMethod.GET):
 
 class SwaggerDocs(RestEndpoint, HttpMethod.GET):
     def list(self, request):
-        html = f"""
+        html = """
         <!DOCTYPE html>
         <html>
         <head>
@@ -242,12 +242,12 @@ class SwaggerDocs(RestEndpoint, HttpMethod.GET):
             <div id="swagger-ui"></div>
             <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
             <script>
-                const ui = SwaggerUIBundle({{
+                const ui = SwaggerUIBundle({
                     url: '/openapi.json',
                     dom_id: '#swagger-ui',
                     presets: [SwaggerUIBundle.presets.apis],
                     layout: "BaseLayout"
-                }})
+                })
             </script>
         </body>
         </html>
