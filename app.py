@@ -15,6 +15,7 @@ agnet_base_url = "http://146.190.243.241:8303/api/v1"
 version = "0.2.1"
 API_MAP = ""
 
+
 class Vendor(RestEndpoint):
     """
     Vendor model that is also:
