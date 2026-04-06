@@ -5,8 +5,8 @@ from DatabaseHandler import DatabaseHandler
 from starlette.responses import JSONResponse
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
-from lightapi import LightApi, RestEndpoint, Field
-from datetime import datetime
+from lightapi import LightApi, RestEndpoint, Field, HttpMethod
+from datetime import datetime, UTC
 
 engine = create_engine("sqlite:///supplynetwork.db", connect_args={"check_same_thread": False})
 
@@ -38,23 +38,24 @@ class Vendor(RestEndpoint):
 
         external_vendors = []
         try:
-            response = requests.get(
-                agnet_url,
-                headers={"X-API-Key": api_key},
-                timeout=5
-            )
-            response.raise_for_status()
-            external_data = response.json()
+            if is_agnet_up:
+                response = requests.get(
+                    agnet_url,
+                    headers={"X-API-Key": api_key},
+                    timeout=5
+                )
+                response.raise_for_status()
+                external_data = response.json()
 
-            for item in external_data.get("items", []):
-                external_vendors.append(Vendor(
-                    vendor_id=item.get("vendorId"),
-                    name=item.get("vendorName"),
-                    type=item.get("vendorType"),
-                    reg_state=item.get("regState"),
-                    order_count=item.get("orderCount", 0),
-                    last_order=item.get("lastOrder")
-                ))
+                for item in external_data.get("items", []):
+                    external_vendors.append(Vendor(
+                        vendor_id=item.get("vendorId"),
+                        name=item.get("vendorName"),
+                        type=item.get("vendorType"),
+                        reg_state=item.get("regState"),
+                        order_count=item.get("orderCount", 0),
+                        last_order=item.get("lastOrder")
+                    ))
         except Exception as e:
 
             print(f"AgNet Integration Error: {e}")
@@ -129,13 +130,32 @@ class ShipmentLot(RestEndpoint):
         endpoint = "/api/v1/shipment-lots"
 
 
+class Health(RestEndpoint, HttpMethod.GET):
+
+    def list(self, request):
+        utc_now = datetime.now(UTC)
+        timestamp_str = utc_now.strftime('%Y-%m-%dT%H:%M:%SZ')
+        data = {
+            "status": "ok",
+            "service": "supplynetwork",
+            "section": "Section 3",
+            "timeUtc": timestamp_str
+        }
+
+        return JSONResponse(data)
+
+    class Meta:
+        endpoint = "/api/v1/health"
+
+
 app = LightApi(engine=engine)
 app.register({
     "/api/v1/vendors": Vendor,
     "/api/v1/categories": Category,
     "/api/v1/products": Product,
     "/api/v1/shipments": Shipment,
-    "/api/v1/shipment-lots": ShipmentLot
+    "/api/v1/shipment-lots": ShipmentLot,
+    "/api/v1/health": Health
 })
 
 if __name__ == "__main__":
