@@ -80,7 +80,7 @@ class Vendor(RestEndpoint):
 
     class Meta:
         table_name = "vendors"
-        endpoint = "/vendors"
+        endpoint = "/api/v1/vendors"
 
 
 class Category(RestEndpoint):
@@ -91,7 +91,7 @@ class Category(RestEndpoint):
 
     class Meta:
         table_name = "categories"
-        endpoint = "/categories"
+        endpoint = "/api/v1/categories"
 
 
 class Product(RestEndpoint):
@@ -103,7 +103,7 @@ class Product(RestEndpoint):
 
     class Meta:
         table_name = "products"
-        endpoint = "/products"
+        endpoint = "/api/v1/products"
 
 
 class Shipment(RestEndpoint):
@@ -113,7 +113,7 @@ class Shipment(RestEndpoint):
 
     class Meta:
         table_name = "shipments"
-        endpoint = "/shipments"
+        endpoint = "/api/v1/shipments"
 
 
 class ShipmentLot(RestEndpoint):
@@ -126,16 +126,16 @@ class ShipmentLot(RestEndpoint):
 
     class Meta:
         table_name = "shipment_lots"
-        endpoint = "/shipment-lots"
+        endpoint = "/api/v1/shipment-lots"
 
 
 app = LightApi(engine=engine)
 app.register({
-    "/vendors": Vendor,
-    "/categories": Category,
-    "/products": Product,
-    "/shipments": Shipment,
-    "/shipment-lots": ShipmentLot
+    "/api/v1/vendors": Vendor,
+    "/api/v1/categories": Category,
+    "/api/v1/products": Product,
+    "/api/v1/shipments": Shipment,
+    "/api/v1/shipment-lots": ShipmentLot
 })
 
 if __name__ == "__main__":
