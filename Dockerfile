@@ -14,3 +14,6 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 
 # Copy project
 COPY . /app/
+
+EXPOSE 3005
+CMD ["python", "app.py"]

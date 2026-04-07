@@ -42,9 +42,7 @@ jobs:
           PYTHONPATH=. pytest tests/ \
             -v \
             --tb=short \
-            --cov=routes \
-            --cov=services \
-            --cov=repository \
+            --cov=app \
             --cov-report=term-missing \
             --cov-report=xml:coverage.xml \
             --cov-fail-under=80
