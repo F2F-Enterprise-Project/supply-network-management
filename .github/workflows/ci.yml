@@ -36,15 +36,13 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-cov
+          pip install pytest pytest-cov httpx
       - name: Run tests with coverage
         run: |
           PYTHONPATH=. pytest tests/ \
             -v \
             --tb=short \
-            --cov=routes \
-            --cov=services \
-            --cov=repository \
+            --cov=app \
             --cov-report=term-missing \
             --cov-report=xml:coverage.xml \
             --cov-fail-under=80

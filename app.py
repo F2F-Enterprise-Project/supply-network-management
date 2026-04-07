@@ -91,7 +91,7 @@ class Vendor(RestEndpoint):
 
 class Category(RestEndpoint):
     category_id: str = Field(primary_key=True)
-    parent_category_id: str = Field(foreign_key="categories.category_id", nullable=True)
+    parent_category_id: str = Field(foreign_key="categorys.category_id", nullable=True)
     category_name: str = Field(max_length=100)
     level: int = Field()
 
@@ -103,7 +103,7 @@ class Category(RestEndpoint):
 class Product(RestEndpoint):
     product_id: str = Field(primary_key=True)
     vendor_id: str = Field(foreign_key="vendors.vendor_id")
-    category_id: str = Field(foreign_key="categories.category_id")
+    category_id: str = Field(foreign_key="categorys.category_id")
     product_name: str = Field(max_length=100)
     unit: str = Field()
 
@@ -281,4 +281,4 @@ if __name__ == "__main__":
     if response.status_code == 200:
         is_agnet_up = True
 
-    app.run(host="0.0.0.0", port=8000)
+    app.run(host="0.0.0.0", port=3005)
