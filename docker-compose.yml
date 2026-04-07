@@ -8,4 +8,4 @@ services:
     volumes:
       - .:/app  # Maps current directory to /app inside container
     ports:
-      - "8000:8000"
+      - "3005:3005"
