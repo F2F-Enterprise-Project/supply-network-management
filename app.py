@@ -1,7 +1,6 @@
 import uuid
 import os
 import requests
-from DatabaseHandler import DatabaseHandler
 from starlette.responses import JSONResponse, HTMLResponse
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
@@ -275,7 +274,6 @@ API_MAP = {
 app.register(API_MAP)
 
 if __name__ == "__main__":
-    DatabaseHandler.setup_tables()
 
     response = requests.get(f"{agnet_base_url}/health")
     if response.status_code == 200:
