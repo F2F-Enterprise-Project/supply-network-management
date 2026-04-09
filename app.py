@@ -275,8 +275,11 @@ app.register(API_MAP)
 
 if __name__ == "__main__":
 
-    response = requests.get(f"{agnet_base_url}/health")
-    if response.status_code == 200:
-        is_agnet_up = True
+    try:
+        response = requests.get(f"{agnet_base_url}/health", timeout=5)
+        if response.status_code == 200:
+            is_agnet_up = True
+    except Exception as e:
+        print(f"AgNet unreachable at startup: {e}")
 
     app.run(host="0.0.0.0", port=3005)
