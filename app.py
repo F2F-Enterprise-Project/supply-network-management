@@ -9,7 +9,6 @@ from datetime import datetime, UTC
 
 engine = create_engine("sqlite:///supplynetwork.db", connect_args={"check_same_thread": False})
 
-is_agnet_up = False
 agnet_base_url = "http://146.190.243.241:8303/api/v1"
 version = "0.2.1"
 API_MAP = ""
@@ -42,24 +41,23 @@ class Vendor(RestEndpoint):
 
         external_vendors = []
         try:
-            if is_agnet_up:
-                response = requests.get(
-                    agnet_url,
-                    headers={"X-API-Key": api_key},
-                    timeout=5
-                )
-                response.raise_for_status()
-                external_data = response.json()
+            response = requests.get(
+                agnet_url,
+                headers={"X-API-Key": api_key},
+                timeout=5
+            )
+            response.raise_for_status()
+            external_data = response.json()
 
-                for item in external_data.get("items", []):
-                    external_vendors.append(Vendor(
-                        vendor_id=item.get("vendorId"),
-                        name=item.get("vendorName"),
-                        type=item.get("vendorType"),
-                        reg_state=item.get("regState"),
-                        order_count=item.get("orderCount", 0),
-                        last_order=item.get("lastOrder")
-                    ))
+            for item in external_data.get("items", []):
+                external_vendors.append(Vendor(
+                    vendor_id=item.get("vendorId"),
+                    name=item.get("vendorName"),
+                    type=item.get("vendorType"),
+                    reg_state=item.get("regState"),
+                    order_count=item.get("orderCount", 0),
+                    last_order=item.get("lastOrder")
+                ))
         except Exception as e:
 
             print(f"AgNet Integration Error: {e}")
@@ -274,12 +272,4 @@ API_MAP = {
 app.register(API_MAP)
 
 if __name__ == "__main__":
-
-    try:
-        response = requests.get(f"{agnet_base_url}/health", timeout=5)
-        if response.status_code == 200:
-            is_agnet_up = True
-    except Exception as e:
-        print(f"AgNet unreachable at startup: {e}")
-
     app.run(host="0.0.0.0", port=3005)
