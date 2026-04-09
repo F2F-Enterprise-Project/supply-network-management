@@ -15,7 +15,5 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 # Copy project
 COPY . /app/
 
-RUN python seed.py
-
 EXPOSE 3005
 CMD ["python", "app.py"]

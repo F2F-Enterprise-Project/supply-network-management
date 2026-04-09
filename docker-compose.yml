@@ -4,7 +4,7 @@ services:
       - PYTHONUNBUFFERED=1
       - AGNET_SECTION_KEY=${AGNET_SECTION_KEY}
     build: .
-    command: python app.py
+    command: sh -c "python seed.py && python app.py"
     volumes:
       - .:/app  # Maps current directory to /app inside container
     ports:
