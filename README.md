@@ -24,6 +24,8 @@ docker-compose up --build
 ```
 The service will be available at http://localhost:8000.
 
+The database is automatically created and seeded with sample data when the Docker image is built. No manual setup required.
+
 ## API Contracts
 1. **Operational Endpoints**
 
