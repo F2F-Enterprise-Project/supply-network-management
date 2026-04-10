@@ -2,11 +2,12 @@
 seed.py - Runs on container startup to set up the database.
 Creates all tables and inserts sample data for locally onboarded vendors
 (these are vendors that exist in SNM but NOT in AgNet).
+Only seeds if the database is empty to prevent duplicates on restart.
 """
 
 import uuid
-from datetime import datetime
-from sqlalchemy import create_engine
+from datetime import datetime, UTC
+from sqlalchemy import create_engine, select, func
 from sqlalchemy.orm import Session
 
 import app as app_module
@@ -23,6 +24,12 @@ print("Tables created.")
 
 with Session(engine) as session:
 
+    # Check if we already have vendors — if so, skip seeding
+    existing = session.execute(select(func.count()).select_from(Vendor)).scalar()
+    if existing > 0:
+        print(f"Database already has {existing} vendors, skipping seed.")
+        exit(0)
+
     # --- Vendors ---
     # Locally onboarded vendors, not in AgNet.
     # Matching AgNet's NAME-HARVEST-TYPE format so Inventory can't tell the difference.
@@ -33,7 +40,7 @@ with Session(engine) as session:
             type="Farm",
             reg_state="Active",
             order_count=0,
-            last_order=datetime.now()
+            last_order=datetime.now(UTC)
         ),
         Vendor(
             vendor_id="CLEARWATER-HARVEST-DAIRY",
@@ -41,7 +48,7 @@ with Session(engine) as session:
             type="Dairy",
             reg_state="Active",
             order_count=0,
-            last_order=datetime.now()
+            last_order=datetime.now(UTC)
         ),
         Vendor(
             vendor_id="IRONWOOD-HARVEST-BUTCHERY",
@@ -49,7 +56,7 @@ with Session(engine) as session:
             type="Butcher",
             reg_state="New",
             order_count=0,
-            last_order=datetime.now()
+            last_order=datetime.now(UTC)
         ),
     ]
     session.add_all(vendors)
@@ -128,12 +135,12 @@ with Session(engine) as session:
         Shipment(
             shipment_id="SHIP-MAPLE-20260301-001",
             vendor_id="MAPLEWOOD-HARVEST-FARM",
-            shipment_date=datetime(2026, 3, 1)
+            shipment_date=datetime(2026, 3, 1, tzinfo=UTC)
         ),
         Shipment(
             shipment_id="SHIP-CLEAR-20260305-001",
             vendor_id="CLEARWATER-HARVEST-DAIRY",
-            shipment_date=datetime(2026, 3, 5)
+            shipment_date=datetime(2026, 3, 5, tzinfo=UTC)
         ),
     ]
     session.add_all(shipments)
@@ -149,7 +156,7 @@ with Session(engine) as session:
             product_id="PROD-KALE",
             quantity_on_hand=150.0,
             unit="kg",
-            last_restocked_date=datetime.now()
+            last_restocked_date=datetime.now(UTC)
         ),
         ShipmentLot(
             lot_id=uuid.uuid4(),
@@ -157,7 +164,7 @@ with Session(engine) as session:
             product_id="PROD-SQUASH",
             quantity_on_hand=200.0,
             unit="kg",
-            last_restocked_date=datetime.now()
+            last_restocked_date=datetime.now(UTC)
         ),
         ShipmentLot(
             lot_id=uuid.uuid4(),
@@ -165,7 +172,7 @@ with Session(engine) as session:
             product_id="PROD-MILK-WHOLE-L",
             quantity_on_hand=100.0,
             unit="l",
-            last_restocked_date=datetime.now()
+            last_restocked_date=datetime.now(UTC)
         ),
     ]
     session.add_all(lots)
