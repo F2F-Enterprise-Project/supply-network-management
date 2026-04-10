@@ -158,6 +158,123 @@ class Product(RestEndpoint):
         endpoint = "/api/v1/products"
 
 
+class Order(RestEndpoint, HttpMethod.POST):
+    order_id: str = Field(primary_key=True, default_factory=lambda: str(uuid.uuid4()))
+    vendor_id: str = Field(max_length=100)
+    status: str = Field(max_length=50)
+    manifest_json: str = Field()
+
+    def create(self, data):
+        vendor_id = data.get("vendorId")
+        manifest = data.get("manifest")
+
+        if not vendor_id or not manifest:
+            return JSONResponse(
+                {"error": {"code": "VALIDATION_ERROR", "message": "vendorId and manifest are required"}},
+                status_code=400
+            )
+
+        # Check if vendor is local
+        with Session(engine) as session:
+            is_local = session.execute(
+                select(Vendor).where(Vendor.vendor_id == vendor_id)
+            ).scalar_one_or_none() is not None
+
+        if is_local:
+            with Session(engine) as session:
+                vendor = session.execute(
+                    select(Vendor).where(Vendor.vendor_id == vendor_id)
+                ).scalar_one()
+
+                errors = []
+                updates = []
+
+                for item in manifest:
+                    product_id = item.get("productId")
+                    qty_order = item.get("quantityOrder")
+
+                    product = session.execute(
+                        select(Product).where(
+                            Product.product_id == product_id,
+                            Product.vendor_id == vendor_id
+                        )
+                    ).scalar_one_or_none()
+
+                    if not product:
+                        errors.append(f"Product {product_id} not found for vendor {vendor_id}")
+                        continue
+
+                    if not isinstance(qty_order, int) or qty_order <= 0:
+                        errors.append(f"Invalid quantityOrder for {product_id}")
+                        continue
+
+                    if qty_order > product.quantity_available:
+                        errors.append(f"Insufficient stock for {product_id}")
+                        continue
+
+                    updates.append((product, qty_order))
+
+                if errors:
+                    return JSONResponse(
+                        {"error": {"code": "INSUFFICIENT_STOCK", "message": errors[0]}},
+                        status_code=400
+                    )
+
+                # Atomic — only decrement if all items passed
+                for product, qty_order in updates:
+                    product.quantity_available -= qty_order
+
+                new_order_id = str(uuid.uuid4())
+                order = Order(
+                    order_id=new_order_id,
+                    vendor_id=vendor_id,
+                    status="accepted",
+                    manifest_json=str(manifest),
+                )
+                session.add(order)
+
+                vendor.order_count += 1
+                vendor.last_order = datetime.now(UTC)
+
+                # Save these before session closes
+                reg_state = vendor.reg_state
+                order_count = vendor.order_count
+
+                session.commit()
+
+            return JSONResponse({
+                "status": "accepted",
+                "orderId": new_order_id,
+                "vendorId": vendor_id,
+                "regState": reg_state,
+                "orderCount": order_count,
+                "message": "Order accepted and inventory decremented"
+            })
+
+        else:
+            # Forward to AgNet
+            api_key = os.getenv("AGNET_SECTION_KEY")
+            try:
+                response = requests.post(
+                    f"{agnet_base_url}/orders",
+                    headers={"X-API-Key": api_key, "Content-Type": "application/json"},
+                    json={"vendorId": vendor_id, "manifest": manifest},
+                    timeout=5
+                )
+            except Exception as e:
+                return JSONResponse(
+                    {"error": {"code": "AGNET_UNREACHABLE", "message": str(e)}},
+                    status_code=500
+                )
+
+            agnet_data = response.json()
+            return JSONResponse(agnet_data, status_code=response.status_code)
+
+    class Meta:
+        table_name = "orders"
+        endpoint = "/api/v1/orders"
+
+
 class Shipment(RestEndpoint):
     shipment_id: str = Field(primary_key=True)
     vendor_id: str = Field(foreign_key="vendors.vendor_id")
@@ -310,6 +427,7 @@ API_MAP = {
     "/api/v1/vendors": Vendor,
     "/api/v1/categories": Category,
     "/api/v1/products": Product,
+    "/api/v1/orders": Order,
     "/api/v1/shipments": Shipment,
     "/api/v1/shipment-lots": ShipmentLot,
     "/api/v1/health": Health,
