@@ -47,6 +47,7 @@ jobs:
               -p "$APP_PORT:$APP_PORT" \
               --name "$APP_NAME" \
               --restart unless-stopped \
+              -e AGNET_SECTION_KEY="${{ secrets.AGNET_SECTION_KEY }}" \
               "$APP_NAME"
 
             sleep 3

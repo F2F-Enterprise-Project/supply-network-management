@@ -22,7 +22,7 @@ To build the image and start the service along with its dependencies, run:
 ```Bash
 docker-compose up --build
 ```
-The service will be available at http://localhost:8000.
+The service will be available at http://localhost:3005.
 
 The database is automatically created and seeded with sample data when the Docker image is built. No manual setup required.
 
@@ -68,5 +68,5 @@ All timestamps generated or returned by this service follow the ISO-8601 UTC for
 Every domain model includes a `version` field. To perform a `PUT` or `PATCH` update, the client must provide the current version number in the request body to prevent concurrent data conflicts.
 
 ## Documentation Links
-- Swagger UI: `http://localhost:8000/docs`
-- OpenAPI Spec: `http://localhost:8000/openapi.json`
+- Swagger UI: `http://localhost:3005/docs`
+- OpenAPI Spec: `http://localhost:3005/openapi.json`
