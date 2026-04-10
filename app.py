@@ -152,7 +152,7 @@ class Product(RestEndpoint):
             })
 
         return JSONResponse({"results": data})
-    
+
     class Meta:
         table_name = "products"
         endpoint = "/api/v1/products"
