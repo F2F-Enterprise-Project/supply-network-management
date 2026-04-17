@@ -1,8 +1,8 @@
 # app.py
-import requests
 import config
 
-from config import engine, agnet_base_url, API_MAP
+from lightapi import LightApi
+from config import engine
 from routes.vendors import Vendor
 from routes.categories import Category
 from routes.products import Product

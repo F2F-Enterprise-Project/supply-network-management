@@ -10,7 +10,6 @@ Category structure is 2 levels only:
 The 3rd element in AgNet's hierarchy array is the product name, not a category.
 """
 
-import uuid
 from datetime import datetime, UTC
 from sqlalchemy import create_engine, select, func
 from sqlalchemy.orm import Session
@@ -331,8 +330,6 @@ with Session(engine) as session:
     ]
     session.add_all(products)
     session.flush()
-
-    session.add_all(lots)
 
     session.commit()
     print("Seed data inserted successfully!")

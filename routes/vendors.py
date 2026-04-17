@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from lightapi import RestEndpoint, Field
 from datetime import datetime
 
-from config import engine, agnet_base_url, is_agnet_up
+from config import engine, agnet_base_url
 
 
 class Vendor(RestEndpoint):
