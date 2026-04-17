@@ -5,6 +5,7 @@ from lightapi import RestEndpoint, HttpMethod
 import config
 from config import version
 
+
 class OpenAPI(RestEndpoint, HttpMethod.GET):
     def list(self, request):
         schema = {

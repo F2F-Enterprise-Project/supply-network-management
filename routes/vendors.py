@@ -9,6 +9,7 @@ from datetime import datetime
 
 from config import engine, agnet_base_url, is_agnet_up
 
+
 class Vendor(RestEndpoint):
     """
     Vendor model that is also:

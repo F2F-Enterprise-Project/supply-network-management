@@ -5,6 +5,7 @@ from lightapi import RestEndpoint, HttpMethod
 
 from config import version
 
+
 class Version(RestEndpoint, HttpMethod.GET):
 
     def list(self, request):

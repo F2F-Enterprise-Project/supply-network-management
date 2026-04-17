@@ -12,10 +12,12 @@ from config import engine, agnet_base_url
 from routes.vendors import Vendor
 from routes.products import Product
 
+
 class InventoryException(Exception):
     def __init__(self, errors):
         self.errors = errors
-        
+
+
 class Order(RestEndpoint, HttpMethod.POST):
     order_id: str = Field(primary_key=True, default_factory=lambda: str(uuid.uuid4()))
     vendor_id: str = Field(max_length=100)
@@ -88,7 +90,7 @@ class Order(RestEndpoint, HttpMethod.POST):
                     vendor.last_order = datetime.now(UTC)
 
             session.commit()
-        
+
         return JSONResponse({
             "status": "accepted",
             "agnetResponses": agnet_responses,

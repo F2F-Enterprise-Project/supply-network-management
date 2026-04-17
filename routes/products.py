@@ -9,6 +9,7 @@ from lightapi import RestEndpoint, Field
 
 from config import engine, agnet_base_url
 
+
 class Product(RestEndpoint):
     product_id: str = Field(primary_key=True)
     vendor_id: str = Field(foreign_key="vendors.vendor_id")
