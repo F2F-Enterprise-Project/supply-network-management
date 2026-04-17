@@ -40,10 +40,10 @@ class Order(RestEndpoint, HttpMethod.POST):
         except InventoryException as e:
             return JSONResponse(
                 {"error": {
-                    "code": "INSUFFICIENT_STOCK", 
-                    "message": "Insufficient stock for one or more items", 
+                    "code": "INSUFFICIENT_STOCK",
+                    "message": "Insufficient stock for one or more items",
                     "details": e.errors
-                    }},
+                }},
                 status_code=400
             )
 
