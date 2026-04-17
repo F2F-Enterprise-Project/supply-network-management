@@ -14,6 +14,11 @@ version = "0.2.1"
 API_MAP = ""
 
 
+class InventoryException(Exception):
+    def __init__(self, errors):
+        self.errors = errors
+
+
 class Vendor(RestEndpoint):
     """
     Vendor model that is also:
@@ -59,7 +64,6 @@ class Vendor(RestEndpoint):
                     last_order=item.get("lastOrder")
                 ))
         except Exception as e:
-
             print(f"AgNet Integration Error: {e}")
 
         combined_list = local_vendors + external_vendors
@@ -136,6 +140,7 @@ class Product(RestEndpoint):
                         product_name=item.get("productName"),
                         unit=item.get("unit"),
                     ))
+
         except Exception as e:
             print(f"AgNet Integration Error: {e}")
 
@@ -146,7 +151,6 @@ class Product(RestEndpoint):
             data.append({
                 "product_id": p.product_id,
                 "vendor_id": p.vendor_id,
-                # "category_id": p.category_id,
                 "product_name": p.product_name,
                 "unit": p.unit,
             })
@@ -165,110 +169,214 @@ class Order(RestEndpoint, HttpMethod.POST):
     manifest_json: str = Field()
 
     def create(self, data):
-        vendor_id = data.get("vendorId")
         manifest = data.get("manifest")
 
-        if not vendor_id or not manifest:
+        if not manifest:
             return JSONResponse(
-                {"error": {"code": "VALIDATION_ERROR", "message": "vendorId and manifest are required"}},
+                {"error": {"code": "VALIDATION_ERROR", "message": "manifest is required"}},
                 status_code=400
             )
 
-        # Check if vendor is local
-        with Session(engine) as session:
-            is_local = session.execute(
-                select(Vendor).where(Vendor.vendor_id == vendor_id)
-            ).scalar_one_or_none() is not None
+        inventory = self.build_inventory()
 
-        if is_local:
-            with Session(engine) as session:
-                vendor = session.execute(
-                    select(Vendor).where(Vendor.vendor_id == vendor_id)
-                ).scalar_one()
+        try:
+            self.check_inventory(manifest, inventory)
+        except InventoryException as e:
+            return JSONResponse(
+                {"error": {"code": "INSUFFICIENT_STOCK", "message": "Insufficient stock for one or more items", "details": e.errors}},
+                status_code=400
+            )
 
-                errors = []
-                updates = []
+        local_manifest, agnet_manifest = self.order_fulfillment(manifest, inventory)
 
-                for item in manifest:
-                    product_id = item.get("productId")
-                    qty_order = item.get("quantityOrder")
+        agnet_responses = []
+        api_key = os.getenv("AGNET_SECTION_KEY")
 
-                    product = session.execute(
-                        select(Product).where(
-                            Product.product_id == product_id,
-                            Product.vendor_id == vendor_id
-                        )
-                    ).scalar_one_or_none()
-
-                    if not product:
-                        errors.append(f"Product {product_id} not found for vendor {vendor_id}")
-                        continue
-
-                    if not isinstance(qty_order, int) or qty_order <= 0:
-                        errors.append(f"Invalid quantityOrder for {product_id}")
-                        continue
-
-                    if qty_order > product.quantity_available:
-                        errors.append(f"Insufficient stock for {product_id}")
-                        continue
-
-                    updates.append((product, qty_order))
-
-                if errors:
-                    return JSONResponse(
-                        {"error": {"code": "INSUFFICIENT_STOCK", "message": errors[0]}},
-                        status_code=400
-                    )
-
-                # Atomic — only decrement if all items passed
-                for product, qty_order in updates:
-                    product.quantity_available -= qty_order
-
-                new_order_id = str(uuid.uuid4())
-                order = Order(
-                    order_id=new_order_id,
-                    vendor_id=vendor_id,
-                    status="accepted",
-                    manifest_json=str(manifest),
-                )
-                session.add(order)
-
-                vendor.order_count += 1
-                vendor.last_order = datetime.now(UTC)
-
-                # Save these before session closes
-                reg_state = vendor.reg_state
-                order_count = vendor.order_count
-
-                session.commit()
-
-            return JSONResponse({
-                "status": "accepted",
-                "orderId": new_order_id,
-                "vendorId": vendor_id,
-                "regState": reg_state,
-                "orderCount": order_count,
-                "message": "Order accepted and inventory decremented"
-            })
-
-        else:
-            # Forward to AgNet
-            api_key = os.getenv("AGNET_SECTION_KEY")
+        for agnet_order in agnet_manifest:
             try:
                 response = requests.post(
                     f"{agnet_base_url}/orders",
                     headers={"X-API-Key": api_key, "Content-Type": "application/json"},
-                    json={"vendorId": vendor_id, "manifest": manifest},
+                    json=agnet_order,
                     timeout=5
                 )
+                agnet_responses.append({
+                    "vendorId": agnet_order["vendorId"],
+                    "status": response.status_code,
+                    "data": response.json()
+                })
             except Exception as e:
                 return JSONResponse(
                     {"error": {"code": "AGNET_UNREACHABLE", "message": str(e)}},
-                    status_code=500
+                    status_code=503
                 )
 
-            agnet_data = response.json()
-            return JSONResponse(agnet_data, status_code=response.status_code)
+        with Session(engine) as session:
+            for local_order in local_manifest:
+                vendor_id = local_order["vendorId"]
+                for item in local_order["manifest"]:
+                    product = session.execute(
+                        select(Product).where(
+                            Product.product_id == item["productId"],
+                            Product.vendor_id == vendor_id
+                        )
+                    ).scalar_one_or_none()
+
+                    if product:
+                        product.quantity_available -= item["quantity"]
+
+                vendor = session.execute(
+                    select(Vendor).where(Vendor.vendor_id == vendor_id)
+                ).scalar_one_or_none()
+
+                if vendor:
+                    vendor.order_count += 1
+                    vendor.last_order = datetime.now(UTC)
+
+            session.commit()
+        
+        return JSONResponse({
+            "status": "accepted",
+            "agnetResponses": agnet_responses,
+            "localManifest": local_manifest,
+            "agnetManifest": agnet_manifest
+        })
+
+    def build_inventory(self):
+        inventory = []
+
+        # Local products
+        with Session(engine) as session:
+            local_products = session.execute(
+                select(Product, Vendor)
+                .join(Vendor, Product.vendor_id == Vendor.vendor_id)
+                .where(Vendor.reg_state.in_(["New", "Active"]))
+            ).all()
+
+            for product, vendor in local_products:
+                inventory.append({
+                    "productId": product.product_id,
+                    "vendorId": vendor.vendor_id,
+                    "quantity": product.quantity_available,
+                    "unit": product.unit,
+                    "source": "local"
+                })
+
+        # AgNet products
+        api_key = os.getenv("AGNET_SECTION_KEY")
+        try:
+            response = requests.get(
+                f"{agnet_base_url}/vendors",
+                headers={"X-API-Key": api_key},
+                timeout=5
+            )
+            response.raise_for_status()
+            for vendor in response.json().get("items", []):
+                if vendor.get("regState") not in ("New", "Active"):
+                    continue
+                for item in vendor.get("availableManifest", []):
+                    inventory.append({
+                        "productId": item.get("productId"),
+                        "vendorId": vendor.get("vendorId"),
+                        "quantity": item.get("quantityAvailable"),
+                        "unit": item.get("unit"),
+                        "source": "agnet"
+                    })
+        except Exception as e:
+            print(f"AgNet Integration Error: {e}")
+
+        return inventory
+
+    def check_inventory(self, manifest, inventory):
+        errors = []
+
+        for item in manifest:
+            product_id = item.get("productId")
+            quantity_needed = item.get("quantity")
+
+            suppliers = [i for i in inventory if i["productId"] == product_id]
+            total_available = sum(i["quantity"] for i in suppliers)
+
+            if total_available < quantity_needed:
+                errors.append({
+                    "productId": product_id,
+                    "quantityNeeded": quantity_needed,
+                    "quantityAvailable": total_available
+                })
+
+        if errors:
+            raise InventoryException(errors)
+
+    def order_fulfillment(self, manifest, inventory):
+        local_plan = []
+        agnet_plan = []
+
+        for item in manifest:
+            product_id = item.get("productId")
+            quantity_needed = item.get("quantity")
+
+            suppliers = [i for i in inventory if i["productId"] == product_id]
+            total_available = sum(i["quantity"] for i in suppliers)
+
+            portions = []
+            for supplier in suppliers:
+                weight = supplier["quantity"] / total_available
+                portion = round(weight * quantity_needed)
+                portions.append({
+                    "productId": product_id,
+                    "vendorId": supplier["vendorId"],
+                    "quantity": portion,
+                    "unit": supplier["unit"],
+                    "source": supplier["source"]
+                })
+
+            # Give remainder to largest supplier to ensure total always matches
+            total_assigned = sum(p["quantity"] for p in portions)
+            difference = quantity_needed - total_assigned
+            if difference != 0:
+                largest = max(portions, key=lambda p: p["quantity"])
+                largest["quantity"] += difference
+
+            for portion in portions:
+                if portion["source"] == "local":
+                    local_plan.append(portion)
+                else:
+                    agnet_plan.append(portion)
+
+        # Group agnet portions by vendor
+        grouped_agnet = {}
+        for portion in agnet_plan:
+            vendor_id = portion["vendorId"]
+            if vendor_id not in grouped_agnet:
+                grouped_agnet[vendor_id] = []
+            grouped_agnet[vendor_id].append({
+                "productId": portion["productId"],
+                "quantityOrder": portion["quantity"]
+            })
+
+        agnet_manifest = [
+            {"vendorId": vid, "manifest": items}
+            for vid, items in grouped_agnet.items()
+        ]
+
+        # Group local portions by vendor
+        grouped_local = {}
+        for portion in local_plan:
+            vendor_id = portion["vendorId"]
+            if vendor_id not in grouped_local:
+                grouped_local[vendor_id] = []
+            grouped_local[vendor_id].append({
+                "productId": portion["productId"],
+                "quantity": portion["quantity"],
+                "unit": portion["unit"]
+            })
+
+        local_manifest = [
+            {"vendorId": vid, "manifest": items}
+            for vid, items in grouped_local.items()
+        ]
+
+        return local_manifest, agnet_manifest
 
     class Meta:
         table_name = "orders"
@@ -289,7 +397,7 @@ class ShipmentLot(RestEndpoint):
     lot_id: uuid.UUID = Field(primary_key=True, default_factory=uuid.uuid4)
     shipment_id: str = Field(foreign_key="shipments.shipment_id")
     product_id: str = Field(foreign_key="products.product_id")
-    quantity_on_hand: float = Field()
+    quantity_on_hand: float = Field(default=0)
     unit: str = Field()
     last_restocked_date: datetime = Field(default_factory=datetime.now)
 
