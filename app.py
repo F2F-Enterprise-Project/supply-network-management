@@ -2,8 +2,6 @@
 import requests
 import config
 
-from lightapi import LightApi
-
 from config import engine, agnet_base_url, API_MAP
 from routes.vendors import Vendor
 from routes.categories import Category
