@@ -71,8 +71,13 @@ class Vendor(RestEndpoint):
         data = []
         for v in combined_list:
             last_order_val = v.last_order
-            if hasattr(last_order_val, 'isoformat'):
-                last_order_val = last_order_val.isoformat()
+            if hasattr(last_order_val, 'strftime'):
+                last_order_val = last_order_val.strftime('%Y-%m-%dT%H:%M:%SZ')
+
+            # added to format agnet response with global standards
+            elif isinstance(last_order_val, str):
+                parsed = datetime.fromisoformat(last_order_val)
+                last_order_val = parsed.strftime('%Y-%m-%dT%H:%M:%SZ')
 
             data.append({
                 "vendor_id": v.vendor_id,
