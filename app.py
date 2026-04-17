@@ -21,7 +21,7 @@ class Vendor(RestEndpoint):
     - Pydantic schema
     - REST endpoint
     """
-    vendor_id: str = Field(primary_key=True, index=True)
+    vendor_id: str = Field(unique=True)
     name: str = Field(max_length=100)
     type: str = Field(max_length=100)
     reg_state: str = Field(max_length=100)
@@ -92,7 +92,7 @@ class Vendor(RestEndpoint):
 
 
 class Category(RestEndpoint):
-    category_id: str = Field(primary_key=True)
+    category_id: str = Field(unique=True)
     parent_category_id: str = Field(foreign_key="categorys.category_id", nullable=True)
     category_name: str = Field(max_length=100)
     level: int = Field()
@@ -103,7 +103,7 @@ class Category(RestEndpoint):
 
 
 class Product(RestEndpoint):
-    product_id: str = Field(primary_key=True)
+    product_id: str = Field(unique=True)
     vendor_id: str = Field(foreign_key="vendors.vendor_id")
     category_id: str = Field(foreign_key="categorys.category_id")
     product_name: str = Field(max_length=100)
@@ -115,7 +115,7 @@ class Product(RestEndpoint):
 
 
 class Shipment(RestEndpoint):
-    shipment_id: str = Field(primary_key=True)
+    shipment_id: str = Field(unique=True)
     vendor_id: str = Field(foreign_key="vendors.vendor_id")
     shipment_date: datetime = Field(default_factory=datetime.now)
 
@@ -125,7 +125,7 @@ class Shipment(RestEndpoint):
 
 
 class ShipmentLot(RestEndpoint):
-    lot_id: uuid.UUID = Field(primary_key=True, default_factory=uuid.uuid4)
+    lot_id: uuid.UUID = Field(unique=True, default_factory=uuid.uuid4)
     shipment_id: str = Field(foreign_key="shipments.shipment_id")
     product_id: str = Field(foreign_key="products.product_id")
     quantity_on_hand: float = Field()
