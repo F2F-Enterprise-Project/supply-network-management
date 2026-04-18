@@ -3,6 +3,7 @@ from datetime import datetime, UTC
 from starlette.responses import JSONResponse
 from lightapi import RestEndpoint, HttpMethod
 
+
 class Health(RestEndpoint, HttpMethod.GET):
 
     def list(self, request):

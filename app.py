@@ -1,8 +1,8 @@
 # app.py
-import requests
 import config
 
-from config import engine, agnet_base_url, API_MAP
+from lightapi import LightApi
+from config import engine
 from routes.vendors import Vendor
 from routes.categories import Category
 from routes.products import Product
@@ -10,6 +10,7 @@ from routes.orders import Order
 from routes.health import Health
 from routes.version import Version
 from routes.docs import OpenAPI, SwaggerDocs
+from models.order_records import Base
 
 app = LightApi(engine=engine)
 
@@ -25,6 +26,7 @@ config.API_MAP = {
 }
 
 app.register(config.API_MAP)
+Base.metadata.create_all(engine)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=3005)

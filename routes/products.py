@@ -1,5 +1,4 @@
 # routes/products.py
-# routes/products.py
 import os
 import requests
 from sqlalchemy import select
@@ -8,6 +7,7 @@ from starlette.responses import JSONResponse
 from lightapi import RestEndpoint, Field
 
 from config import engine, agnet_base_url
+
 
 class Product(RestEndpoint):
     product_id: str = Field(primary_key=True)
