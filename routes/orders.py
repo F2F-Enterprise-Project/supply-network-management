@@ -17,7 +17,6 @@ from routes.products import Product
 from models.order_records import AgnetOrderRecord, LocalOrderRecord
 
 
-
 class InventoryException(Exception):
     def __init__(self, errors):
         self.errors = errors
