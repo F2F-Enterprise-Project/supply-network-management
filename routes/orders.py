@@ -37,6 +37,9 @@ class Order(RestEndpoint, HttpMethod.POST):
 
         inventory = self.build_inventory()
 
+        if isinstance(inventory, JSONResponse):
+            return inventory
+
         try:
             self.check_inventory(manifest, inventory)
         except InventoryException as e:
@@ -46,7 +49,7 @@ class Order(RestEndpoint, HttpMethod.POST):
                     "message": "Insufficient stock for one or more items",
                     "details": e.errors
                 }},
-                status_code=400
+                status_code=409
             )
 
         local_manifest, agnet_manifest = self.order_fulfillment(manifest, inventory)
@@ -125,7 +128,7 @@ class Order(RestEndpoint, HttpMethod.POST):
         return JSONResponse({
             "status": "accepted",
             "order_id": order_id,
-            "manifest": agnet_manifest + local_manifest,
+            # "manifest": agnet_manifest + local_manifest,
         })
 
     def build_inventory(self):
@@ -168,8 +171,12 @@ class Order(RestEndpoint, HttpMethod.POST):
                         "unit": item.get("unit"),
                         "source": "agnet"
                     })
+
         except Exception as e:
-            print(f"AgNet Integration Error: {e}")
+            return JSONResponse(
+                {"error": {"code": "AGNET_UNREACHABLE", "message": str(e)}},
+                status_code=503
+            )
 
         return inventory
 
