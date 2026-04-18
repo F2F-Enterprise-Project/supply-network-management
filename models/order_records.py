@@ -5,8 +5,6 @@ from datetime import datetime, UTC
 from sqlalchemy import Column, String, DateTime, Text, ForeignKey
 from sqlalchemy.orm import DeclarativeBase
 
-from config import engine
-
 
 class Base(DeclarativeBase):
     pass
