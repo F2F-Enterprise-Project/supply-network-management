@@ -4,6 +4,7 @@ import os
 import requests
 import json
 
+
 from datetime import datetime, UTC
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -14,6 +15,7 @@ from config import engine, agnet_base_url
 from routes.vendors import Vendor
 from routes.products import Product
 from models.order_records import AgnetOrderRecord, LocalOrderRecord
+
 
 
 class InventoryException(Exception):
@@ -49,7 +51,7 @@ class Order(RestEndpoint, HttpMethod.POST):
                     "message": "Insufficient stock for one or more items",
                     "details": e.errors
                 }},
-                status_code=409
+                status_code=400
             )
 
         local_manifest, agnet_manifest = self.order_fulfillment(manifest, inventory)
