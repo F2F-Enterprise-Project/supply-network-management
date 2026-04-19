@@ -2,6 +2,8 @@
 import uuid
 import os
 import requests
+import json
+
 
 from datetime import datetime, UTC
 from sqlalchemy import select
@@ -12,6 +14,7 @@ from lightapi import RestEndpoint, Field, HttpMethod
 from config import engine, agnet_base_url
 from routes.vendors import Vendor
 from routes.products import Product
+from models.order_records import AgnetOrderRecord, LocalOrderRecord
 
 
 class InventoryException(Exception):
@@ -21,9 +24,8 @@ class InventoryException(Exception):
 
 class Order(RestEndpoint, HttpMethod.POST):
     order_id: str = Field(primary_key=True, default_factory=lambda: str(uuid.uuid4()))
-    vendor_id: str = Field(max_length=100)
     status: str = Field(max_length=50)
-    manifest_json: str = Field()
+    ordered_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     def create(self, data):
         manifest = data.get("manifest")
@@ -35,6 +37,9 @@ class Order(RestEndpoint, HttpMethod.POST):
             )
 
         inventory = self.build_inventory()
+
+        if isinstance(inventory, JSONResponse):
+            return inventory
 
         try:
             self.check_inventory(manifest, inventory)
@@ -52,6 +57,7 @@ class Order(RestEndpoint, HttpMethod.POST):
 
         agnet_responses = []
         api_key = os.getenv("AGNET_SECTION_KEY")
+        order_id = str(uuid.uuid4())
 
         for agnet_order in agnet_manifest:
             try:
@@ -75,6 +81,14 @@ class Order(RestEndpoint, HttpMethod.POST):
         with Session(engine) as session:
             for local_order in local_manifest:
                 vendor_id = local_order["vendorId"]
+
+                session.add(LocalOrderRecord(
+                    id=str(uuid.uuid4()),
+                    order_id=order_id,
+                    vendor_id=vendor_id,
+                    manifest_json=json.dumps(local_order["manifest"]),
+                ))
+
                 for item in local_order["manifest"]:
                     product = session.execute(
                         select(Product).where(
@@ -94,13 +108,28 @@ class Order(RestEndpoint, HttpMethod.POST):
                     vendor.order_count += 1
                     vendor.last_order = datetime.now(UTC)
 
+            order = Order(
+                order_id=order_id,
+                status="accepted",
+                ordered_at=datetime.now(UTC)
+            )
+            session.add(order)
+
+            for agnet_resp, agnet_order in zip(agnet_responses, agnet_manifest):
+                session.add(AgnetOrderRecord(
+                    id=str(uuid.uuid4()),
+                    order_id=order_id,
+                    agnet_order_id=agnet_resp["data"].get("orderId"),
+                    vendor_id=agnet_resp["vendorId"],
+                    manifest_json=json.dumps(agnet_order["manifest"]),
+                ))
+
             session.commit()
 
         return JSONResponse({
             "status": "accepted",
-            "agnetResponses": agnet_responses,
-            "localManifest": local_manifest,
-            "agnetManifest": agnet_manifest
+            "order_id": order_id,
+            # "manifest": agnet_manifest + local_manifest,
         })
 
     def build_inventory(self):
@@ -143,8 +172,12 @@ class Order(RestEndpoint, HttpMethod.POST):
                         "unit": item.get("unit"),
                         "source": "agnet"
                     })
+
         except Exception as e:
-            print(f"AgNet Integration Error: {e}")
+            return JSONResponse(
+                {"error": {"code": "AGNET_UNREACHABLE", "message": str(e)}},
+                status_code=503
+            )
 
         return inventory
 

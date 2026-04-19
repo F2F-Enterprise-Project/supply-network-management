@@ -1,5 +1,4 @@
 # routes/products.py
-# routes/products.py
 import os
 import requests
 from sqlalchemy import select
@@ -51,7 +50,10 @@ class Product(RestEndpoint):
                     ))
 
         except Exception as e:
-            print(f"AgNet Integration Error: {e}")
+            return JSONResponse(
+                {"error": {"code": "AGNET_UNREACHABLE", "message": str(e)}},
+                status_code=503
+            )
 
         combined_list = local_products + external_products
 

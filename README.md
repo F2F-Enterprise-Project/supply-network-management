@@ -45,8 +45,7 @@ All business endpoints utilize `api/v1/` as the route prefix.
 | /api/v1/vendors       | Vendor      | Merges local registry with live data from AgNet (146.190.243.241). |
 | /api/v1/categories    | Category    | Manages the 3-level product hierarchy.                             |
 | /api/v1/products      | Product     | The master product catalog for the fulfillment system.             |
-| /api/v1/shipments     | Shipment    | Records incoming vendor shipment metadata.                         |
-| /api/v1/shipment-lots | ShipmentLot | Tracks individual lots with UUIDs (lot_id) and quantities.         |
+| /api/v1/orders     | Orders    | Places an order with the system.                         |
 
 ## Global Integration Standards
 **Timestamp Format**
