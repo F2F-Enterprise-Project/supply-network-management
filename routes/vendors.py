@@ -81,7 +81,7 @@ class Vendor(RestEndpoint):
             })
 
         return JSONResponse(data)
-    
+
     def create(self, request):
         try:
             return super().create(request)
