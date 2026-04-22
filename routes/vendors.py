@@ -4,6 +4,7 @@ import requests
 from starlette.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from lightapi import RestEndpoint, Field
 from datetime import datetime
 
@@ -80,6 +81,15 @@ class Vendor(RestEndpoint):
             })
 
         return JSONResponse(data)
+    
+    def create(self, request):
+        try:
+            return super().create(request)
+        except IntegrityError:
+            return JSONResponse(
+                {"error": "Vendor with this ID already exists"},
+                status_code=400
+            )
 
     class Meta:
         table_name = "vendors"
